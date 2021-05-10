@@ -73,7 +73,7 @@ while True:
 
 
             if "modqueue" in rules_by_type:
-                print("Listenin to modqueue stream...")
+                print("Listening to modqueue stream...")
                 rules = Rule.sort_rules(rules_by_type['modqueue'])
                 streams.append({
                     'stream': subreddit.mod.stream.modqueue(pause_after=-1, skip_existing=True),
