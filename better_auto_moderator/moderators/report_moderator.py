@@ -9,9 +9,10 @@ class ReportModerator(Moderator):
 class ReportModeratorChecks(ModeratorChecks):
     @comparator(default='numeric')
     def rule_number(self, rule, value):
-        report_reason = [report[0] for report in self.item.mod_reports][0];
-        for count, item in enumerate(self.item.subreddit.rules, start=1):
-            if item.violation_reason == report_reason:
-                return count
+        if self.item.mod_reports:
+            report_reason = [report[0] for report in self.item.mod_reports][0];
+            for count, item in enumerate(self.item.subreddit.rules, start=1):
+                if item.violation_reason == report_reason:
+                    return count
 
-        return 0
+            return 0
