@@ -409,9 +409,10 @@ class ModeratorChecks(AbstractChecks):
 
     @comparator(default='time')
     def domain_age(self, rule, options):
-        w = whois.query(self.item.domain)
-        if w:
-            return w.creation_date
+        if not self.item.is_self:
+            w = whois.query(self.item.domain)
+            if w:
+                return w.creation_date
             
         return datetime.utcfromtimestamp(-1)
 
