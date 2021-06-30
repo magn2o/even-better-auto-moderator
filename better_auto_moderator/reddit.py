@@ -7,10 +7,11 @@ reddit = praw.Reddit(client_id=environ.get('REDDIT_CLIENT_ID'),
                      username=environ.get('REDDIT_USERNAME'),
                      password=environ.get('REDDIT_PASSWORD'))
 subreddit = reddit.subreddit(environ.get('REDDIT_SUBREDDIT'))
+config_subreddit = reddit.subreddit(environ.get('REDDIT_CONFIG_SUBREDDIT'))
 
 def update_automod_config(new_yaml):
     print("Updating automod config...")
-    subreddit.wiki["config/automoderator"].edit(new_yaml, "BetterAutoModerator push")
+    config_subreddit.wiki["config/automoderator"].edit(new_yaml, "BetterAutoModerator push")
 
 def comment_edit_stream(pause_after=-1):
     edited = subreddit.mod.edited

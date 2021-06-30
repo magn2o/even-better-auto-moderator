@@ -3,7 +3,7 @@ import os
 import re
 from ruamel import yaml
 from better_auto_moderator.rule import Rule
-from better_auto_moderator.reddit import subreddit, update_automod_config
+from better_auto_moderator.reddit import config_subreddit, update_automod_config
 from better_auto_moderator.util import to_yaml_string
 
 config_last_update_at = 0
@@ -61,7 +61,7 @@ def get_config_from_wiki():
     global config_last_update_at
     rules = None
     config = None
-    for page in subreddit.wiki:
+    for page in config_subreddit.wiki:
         if page.name == "better_auto_moderator":
             config = page
         if page.name == "better_auto_moderator/rules":
@@ -72,7 +72,7 @@ def get_config_from_wiki():
 
     if not rules:
         rules = create_bam_pages(not bool(config))
-        config = subreddit.wiki['better_auto_moderator']
+        config = config_subreddit.wiki['better_auto_moderator']
 
     if rules.revision_date <= rules_last_update_at and config.revision_date <= config_last_update_at:
         return (None, None)
@@ -101,7 +101,7 @@ def create_bam_pages(create_config):
     # It should be saved in revisions, but be safe.
     overwrite_automoderator: false
         """
-        page = subreddit.wiki.create("better_auto_moderator", content, reason="BAM Setup")
+        page = config_subreddit.wiki.create("better_auto_moderator", content, reason="BAM Setup")
         page.mod.update(True, 2) # Lock the page to mods only
 
     content = """
@@ -117,7 +117,7 @@ def create_bam_pages(create_config):
 
     ---
     """
-    page = subreddit.wiki.create("better_auto_moderator/rules", content, reason="BAM Setup")
+    page = config_subreddit.wiki.create("better_auto_moderator/rules", content, reason="BAM Setup")
     page.mod.update(True, 2) # Lock the page to mods only
 
     return page
