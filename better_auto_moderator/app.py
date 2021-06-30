@@ -5,6 +5,7 @@ from better_auto_moderator.reddit import post_edit_stream, comment_edit_stream
 from better_auto_moderator.moderators.comment_moderator import CommentModerator
 from better_auto_moderator.moderators.modqueue_moderator import ModqueueModerator
 from better_auto_moderator.moderators.post_moderator import PostModerator
+from better_auto_moderator.moderators.report_moderator import ReportModerator
 from better_auto_moderator.rule import Rule
 from time import sleep
 
@@ -79,6 +80,15 @@ while True:
                     'stream': subreddit.mod.stream.modqueue(pause_after=-1, skip_existing=True),
                     'rules': rules,
                     'moderator': ModqueueModerator
+                })
+
+            if "report" in rules_by_type:
+                print("Listening to report stream...")
+                rules = Rule.sort_rules(rules_by_type['report'])
+                streams.append({
+                    'stream': subreddit.mod.stream.reports(pause_after=-1, skip_existing=True),
+                    'rules': rules,
+                    'moderator': ReportModerator
                 })
 
     # Loop through each of the streams, jumping to the next one when one comes up empty

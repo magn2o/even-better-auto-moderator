@@ -1,5 +1,6 @@
 import re
 import praw
+import whois
 from urllib.parse import urlparse
 from functools import cached_property, wraps
 from better_auto_moderator.rule import Rule
@@ -20,7 +21,12 @@ class Moderator:
         self.matches = {}
 
     def set_match(self, match, value):
-        self.matches[match] = value
+        if match not in self.matches:
+            self.matches[match] = {}
+            # self.matches[match][0] = value
+
+        idx = len(self.matches[match])
+        self.matches[match][idx] = value
 
     # Available at `self.checks`, without needing to call the func
     @cached_property
@@ -41,6 +47,13 @@ class Moderator:
             exempt = rule.config['moderators_exempt']
 
         return exempt
+
+    def for_moderators_only(self, rule):
+        only_mods = False
+        if 'moderators_only' in rule.config:
+            only_mods = rule.config['moderators_only']
+
+        return only_mods
 
     def moderate(self, rule):
         if self.are_moderators_exempt(rule):
@@ -123,7 +136,12 @@ class Moderator:
                         check_val = check(val, rule, options)
                         if check_val is None:
                             return False
-                        elif check_val is True:
+                        elif isinstance(check_val, list):
+                            for count, value in enumerate(check_val[1].groups()):
+                                self.set_match(check_val[0], value)
+                                check_val = True
+                        
+                        if check_val is True:
                             passed = check_truthiness
 
             if not passed and (not satisfy_any_threshold or check_name not in threshold_checks):
@@ -138,7 +156,7 @@ class Moderator:
         return True
 
     @staticmethod
-    def full_exact(values, test, options):
+    def full_exact(values, test, options, name=None):
         if not isinstance(values, list):
             values = [values]
 
@@ -146,8 +164,9 @@ class Moderator:
 
         if 'regex' in options:
             for value in values:
-                if re.fullmatch(test, value) is not None:
-                    return True
+                matches = re.fullmatch(test, value)
+                if matches is not None:
+                    return [name, matches]
 
             return False
 
@@ -268,6 +287,7 @@ class Moderator:
 
     @classmethod
     def full_text(cls, value, test, options):
+        # value = value[0] if isinstance(value, list) else value
         value = re.sub(r'^[^A-Za-z0-9]*', '', value)
         value = re.sub(r'[^A-Za-z0-9]*$', '', value)
         return cls.full_exact(value, test, options)
@@ -311,7 +331,7 @@ def comparator(default='full-exact', **kwargs):
             if 'skip_if' in kwargs and kwargs.get('skip_if') == func_value:
                 return None
 
-            return comparator(func_value, value, options)
+            return comparator(func_value, value, options) if 'regex' not in options else comparator(func_value, value, options, func.__name__)
         return wrapper_comparator
     return decorator_comparator
 
@@ -369,11 +389,14 @@ class ModeratorChecks(AbstractChecks):
 
     @comparator(default='contains')
     def report_reasons(self, rule, options):
-        reports = self.item.user_reports
-        if not self.moderator.are_moderators_exempt(rule):
-            reports = reports + self.item.mod_reports
+        if self.moderator.for_moderators_only(rule):
+            reports = self.item.mod_reports
+        else:
+            reports = self.item.user_reports
+            if not self.moderator.are_moderators_exempt(rule):
+                reports = reports + self.item.mod_reports
 
-        return [report[0] for report in reports]
+        return ''.join([report[0] for report in reports])
 
     @comparator(default='numeric')
     def reports(self, rule, options):
@@ -383,6 +406,14 @@ class ModeratorChecks(AbstractChecks):
     @comparator(default='bool')
     def is_edited(self, rule, options):
         return bool(self.item.edited)
+
+    @comparator(default='time')
+    def domain_age(self, rule, options):
+        w = whois.query(self.item.domain)
+        if w:
+            return w.creation_date
+            
+        return datetime.utcfromtimestamp(-1)
 
 class ModeratorAuthorChecks(AbstractChecks):
     @comparator(default='numeric')
@@ -454,7 +485,7 @@ class ModeratorActions(AbstractActions):
         return self.moderator.action(author_rule, actions=author_actions)
 
     def ignore_reports(self, rule, value):
-        print("Ingoring reports on %s %s" % (type(self.item).__name__, self.item.id))
+        print("Ignoring reports on %s %s" % (type(self.item).__name__, self.item.id))
         self.item.mod.ignore_reports()
         return True
 
@@ -470,8 +501,11 @@ class ModeratorActions(AbstractActions):
             comment.mod.lock()
         if rule.config.get('comment_stickied'):
             comment.mod.distinguish("yes", sticky=True)
+        elif rule.config.get('comment_distinguished'):
+            comment.mod.distinguish("yes", sticky=False)
 
     def message(self, rule, value):
+        print("Sending message to %s" % self.item.author)
         subject = "BetterAutoModerator notification"
         if 'message_subject' in rule.config:
             subject = ModeratorPlaceholders.replace(rule.config['message_subject'], self.item, self.moderator)
@@ -536,6 +570,37 @@ class ModeratorActions(AbstractActions):
             self.item.report(reason)
             return True
 
+        elif value == 'ban':
+            if self.item.author in self.item.subreddit.moderator():
+                return False
+
+            if not self.item.approved:
+                print("Removing %s %s" % (type(self.item).__name__, self.item.id))
+                self.item.mod.remove()
+
+            if any(self.item.subreddit.banned(redditor=self.item.author)):
+                return False
+
+            print("Banning %s %s" % (type(self.item.author).__name__, self.item.author.name))
+            reason = None
+            if 'ban_reason' in rule.config:
+                reason = ModeratorPlaceholders.replace(rule.config['ban_reason'], self.item, self.moderator)
+
+            message = None
+            if 'ban_message' in rule.config:
+                message = ModeratorPlaceholders.replace(rule.config['ban_message'], self.item, self.moderator)
+
+            duration = None
+            if 'ban_duration' in rule.config:
+                duration = int(ModeratorPlaceholders.replace(rule.config['ban_duration'], self.item, self.moderator))
+
+            if duration is not None and (1 <= duration <= 999):
+                self.item.subreddit.banned.add(self.item.author, ban_reason=reason, duration=duration, ban_message=message)
+            else:
+                self.item.subreddit.banned.add(self.item.author, ban_reason=reason, ban_message=message)
+
+            return True
+
         return False
 
     def set_sticky(self, rule, value):
@@ -580,6 +645,22 @@ class ModeratorAuthorActions(AbstractActions):
 
         return False
 
+    def message(self, rule, value):
+        check = ModeratorAuthorChecks(self.moderator)
+        subject = "BetterAutoModerator notification"
+
+        if 'message_subject' in rule.config:
+            subject = ModeratorPlaceholders.replace(rule.config['message_subject'], self.item, self.moderator)
+
+        message = """%s
+
+%s
+
+*I am a bot, and this action was performed automatically. Please [contact the moderators of this subreddit](https://www.reddit.com/message/compose/?to=/r/%s) if you have any questions or concerns.*""" % ("https://www.reddit.com"+self.item.permalink, value, self.item.subreddit.name)
+
+        self.item.subreddit.modmail.create(subject, message, self.item.author)
+        return True
+
 class ModeratorPlaceholders():
     @classmethod
     def replace(cls, val, item, mod):
@@ -590,15 +671,24 @@ class ModeratorPlaceholders():
         matches = re.findall(r'{{(.*?)}}', val)
         if len(matches) == 0:
             return val
-
+        
         replaced = val
         for group in matches:
             inject = None
             if group[:5] == 'match':
-                key = group[6:]
-                if key == '':
+                if match := re.match(r"match-(?:([^}]+?)-)?(\d+)", group):
+                    if match.group(2) is not None:
+                        key, idx = match.groups()
+                    else:
+                        idx = match.group(1)
+                else:
                     key = None
-                inject = cls.match(mod, key=key)
+                    idx = 1
+                inject = cls.match(mod, key=key, idx=idx)
+            elif group[:4] == 'rule':
+                if _ := re.match(r"rule_(?:([^}]+?)-)?(\d+)", group):
+                    key, idx = _.groups()
+                    inject = cls.rule(item, key, idx)
             elif hasattr(cls, group): # If a placeholder exists, use it!
                 inject = getattr(cls, group)(item)
 
@@ -608,16 +698,27 @@ class ModeratorPlaceholders():
         return replaced
 
     @staticmethod
-    def match(mod, key=None):
+    def match(mod, key=None, idx=0):
         if key is None:
             if len(mod.matches.keys()) == 0:
                 return None
             key = mod.matches.keys()[0]
 
         if key in mod.matches:
-            return mod.matches[key]
-        else:
-            return None
+            if int(idx) in mod.matches[key]:
+                return mod.matches[key][int(idx)]
+
+        return None
+
+    @staticmethod
+    def rule(item, key=None, idx=0):
+        if idx is not None:
+            for count, rule in enumerate(item.subreddit.rules, start=1):
+                if count == int(idx):
+                    if hasattr(rule, key):
+                        return getattr(rule, key)
+
+        return None
 
     @staticmethod
     def author(item):
@@ -639,6 +740,10 @@ class ModeratorPlaceholders():
             return flair['flair_template_id']
         else:
             return ''
+
+    @staticmethod
+    def parent_author(item):
+        return str(item.submission.author.name) if item.is_root else str(item.parent().author.name)
 
     @staticmethod
     def body(item):

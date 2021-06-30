@@ -1,5 +1,5 @@
 from functools import cached_property
-from better_auto_moderator.moderators.moderator import Moderator, ModeratorChecks, ModeratorAuthorChecks, ModeratorActions, comparator
+from better_auto_moderator.moderators.moderator import Moderator, ModeratorChecks, ModeratorAuthorChecks, ModeratorActions, ModeratorAuthorActions, comparator
 from better_auto_moderator.moderators.post_moderator import PostModeratorChecks, PostModeratorActions
 from better_auto_moderator.rule import Rule
 from better_auto_moderator.reddit import reddit
@@ -23,7 +23,13 @@ class CommentModerator(Moderator):
 
 class CommentModeratorChecks(ModeratorChecks):
     def author(self, value, rule, options):
-        author_checks = ModeratorCommentAuthorChecks(self.moderator)
+        author_checks = CommentModeratorAuthorChecks(self.moderator)
+        author_rule = Rule(value)
+        return self.moderator.check(author_rule, checks=author_checks)
+
+    def parent_author(self, value, rule, options):
+        author_checks = ModeratorAuthorChecks(self.moderator)
+        author_checks.item = self.item.submission if self.item.is_root else self.item.parent()
         author_rule = Rule(value)
         return self.moderator.check(author_rule, checks=author_checks)
 
@@ -46,12 +52,18 @@ class CommentModeratorChecks(ModeratorChecks):
     def is_top_level(self, rule, options):
         return comment_depth(self.item) == 0
 
-class ModeratorCommentAuthorChecks(ModeratorAuthorChecks):
+class CommentModeratorAuthorChecks(ModeratorAuthorChecks):
     @comparator(default='bool')
     def is_submitter(self, rule, options):
         return self.item.author.id == self.item.submission.author.id
 
 class CommentModeratorActions(ModeratorActions):
+    def parent_author(self, rule, value):
+        author_actions = ModeratorAuthorActions(self.moderator)
+        author_actions.item = self.item.submission if self.item.is_root else self.item.parent()
+        author_rule = Rule(value)
+        return self.moderator.action(author_rule, actions=author_actions)
+
     def parent_submission(self, rule, value):
         post_actions = PostModeratorActions(self.moderator)
         post_actions.item = self.item.submission

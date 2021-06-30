@@ -1,6 +1,6 @@
 import re
 from functools import cached_property
-from better_auto_moderator.moderators.moderator import Moderator, ModeratorChecks, ModeratorActions, AbstractChecks, comparator, ModeratorPlaceholders
+from better_auto_moderator.moderators.moderator import Moderator, ModeratorChecks, ModeratorActions, ModeratorAuthorActions, AbstractChecks, comparator, ModeratorPlaceholders
 from better_auto_moderator.reddit import reddit
 from better_auto_moderator.rule import Rule
 

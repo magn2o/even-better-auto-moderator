@@ -33,9 +33,10 @@ def get_configs():
 
     if 'variables' in config:
         variables_block = ""
-        for var in config['variables']:
-            # Format vaues into a value yaml doc
-            value = to_yaml_string(config['variables'][var])
+        for d in config['variables']:
+            var = list(d)[0]
+            # Format values into a value yaml doc
+            value = to_yaml_string(d[var])
             variables_block = "%s%s: &%s %s" % (variables_block, var, var, value)
 
         # Capture variables in all_anchors
@@ -85,7 +86,6 @@ def get_config_from_wiki():
 
     return (rules, config)
 
-
 def create_bam_pages(create_config):
     print('creating bam rules')
     if create_config:
@@ -121,8 +121,6 @@ def create_bam_pages(create_config):
     page.mod.update(True, 2) # Lock the page to mods only
 
     return page
-
-
 
 def get_bam_rules(rules):
     bam_rules = []
