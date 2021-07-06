@@ -13,4 +13,4 @@ def to_yaml_string(obj):
 
     dump = DumpStream()
     safe_yaml.dump(obj, stream=dump)
-    return dump.val
+    return "\n"+dump.val if dump.val[0] == "-" else dump.val
