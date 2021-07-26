@@ -1,4 +1,4 @@
-import praw
+import praw, prawcore
 import better_auto_moderator.config as config
 from better_auto_moderator.reddit import subreddit, reddit
 from better_auto_moderator.reddit import post_edit_stream, comment_edit_stream
@@ -93,18 +93,21 @@ while True:
 
     # Loop through each of the streams, jumping to the next one when one comes up empty
     for stream in streams:
-        for item in stream['stream']:
-            # If we don't get any items from the stream, break and start the next stream
-            if item is None:
-                break
-
-            print("Processing %s %s" % (type(item).__name__, item))
-            mod = stream['moderator'](item)
-            for rule in stream['rules']:
-                ran = mod.moderate(rule)
-                if ran:
-                    # If the rule passes, don't apply any additional rules for this item
+        try:
+            for item in stream['stream']:
+                # If we don't get any items from the stream, break and start the next stream
+                if item is None:
                     break
+
+                print("Processing %s %s" % (type(item).__name__, item))
+                mod = stream['moderator'](item)
+                for rule in stream['rules']:
+                    ran = mod.moderate(rule)
+                    if ran:
+                        # If the rule passes, don't apply any additional rules for this item
+                        break
+        except prawcore.exceptions.BadJSON:
+            print("Error: ", prawcore.exceptions.BadJSON)
 
     n = (n + 1) % 5
     sleep(0.5) # Sleep just a bit each time, to avoid hitting our rate limit
