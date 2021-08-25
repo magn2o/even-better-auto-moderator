@@ -8,6 +8,7 @@ reddit = praw.Reddit(client_id=environ.get('REDDIT_CLIENT_ID'),
                      password=environ.get('REDDIT_PASSWORD'))
 subreddit = reddit.subreddit(environ.get('REDDIT_SUBREDDIT'))
 config_subreddit = reddit.subreddit(environ.get('REDDIT_CONFIG_SUBREDDIT'))
+config_wiki_name = environ.get('REDDIT_CONFIG_WIKI', "better_auto_moderator")
 
 def update_automod_config(new_yaml):
     print("Updating automod config...")
