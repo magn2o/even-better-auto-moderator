@@ -84,12 +84,6 @@ while True:
 
             if "report" in rules_by_type:
                 print("Listening to report stream...")
-                rules = Rule.sort_rules(rules_by_type['report'])
-                streams.append({
-                    'stream': subreddit.mod.stream.reports(pause_after=-1, skip_existing=True),
-                    'rules': rules,
-                    'moderator': ReportModerator
-                })
 
     # Loop through each of the streams, jumping to the next one when one comes up empty
     for stream in streams:
@@ -108,6 +102,19 @@ while True:
                         break
         except prawcore.exceptions.BadJSON:
             print("Error: ", prawcore.exceptions.BadJSON)
+            
+    # Loop through reports looking specifically for mod_reports
+    if "report" in rules_by_type:
+        rules = Rule.sort_rules(rules_by_type['report'])
+        for item in subreddit.mod.reports():
+            if item.mod_reports:
+                print("Processing Report on %s %s" % (type(item).__name__, item))
+                mod = ReportModerator(item)
+                for rule in rules:
+                    ran = mod.moderate(rule)
+                    if ran:
+                        # If the rule passes, don't apply any additional rules for this item
+                        break
 
     n = (n + 1) % 5
     sleep(0.5) # Sleep just a bit each time, to avoid hitting our rate limit
