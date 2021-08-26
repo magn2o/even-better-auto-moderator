@@ -1,6 +1,6 @@
 import praw, prawcore
 import better_auto_moderator.config as config
-from better_auto_moderator.reddit import subreddit, reddit
+from better_auto_moderator.reddit import subreddit, reddit, config_wiki_name
 from better_auto_moderator.reddit import post_edit_stream, comment_edit_stream
 from better_auto_moderator.moderators.comment_moderator import CommentModerator
 from better_auto_moderator.moderators.modqueue_moderator import ModqueueModerator
@@ -16,9 +16,9 @@ print("""
 
 Good day, dear reddit moderator! I hope that your day is filled with ample updoots and gold!
 If you're not already aware, the configuration for BetterAutoModerator can be found in your subreddit's wiki,
-under the /better_auto_moderator path. Have a good one!
+under the /%s path. Have a good one!
 
-""")
+""" % config_wiki_name)
 
 while True:
     # Each iteration we do `n = (n + 1) % 5`... so every 5th iteration we check for new wiki rules
