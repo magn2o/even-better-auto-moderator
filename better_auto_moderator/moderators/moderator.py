@@ -540,8 +540,8 @@ class ModeratorActions(AbstractActions):
             if self.item.removed:
                 return False
 
-            # if self.item.approved and 'reports' not in rule.config:
-            #     return False
+            if self.item.approved and 'reports' not in rule.config:
+                return False
 
             print("Approving %s %s" % (type(self.item).__name__, self.item.id))
             self.item.mod.approve()

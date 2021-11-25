@@ -107,7 +107,7 @@ while True:
     if "report" in rules_by_type:
         rules = Rule.sort_rules(rules_by_type['report'])
         for item in subreddit.mod.reports():
-            if item.mod_reports:
+            if item.mod_reports and not item.approved and not item.removed: 
                 print("Processing Report on %s %s" % (type(item).__name__, item))
                 mod = ReportModerator(item)
                 for rule in rules:
