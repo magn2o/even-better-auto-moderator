@@ -100,40 +100,40 @@ while True:
                     if ran:
                         # If the rule passes, don't apply any additional rules for this item
                         break
-    except prawcore.exceptions.BadJSON as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))
-    except prawcore.exceptions.ServerError as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))
-    except prawcore.exceptions.RequestException as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))
-    except praw.exceptions.PRAWException as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))	
-    except praw.exceptions.APIException as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+        except prawcore.exceptions.BadJSON as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+        except prawcore.exceptions.ServerError as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+        except prawcore.exceptions.RequestException as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+        except praw.exceptions.PRAWException as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))	
+        except praw.exceptions.APIException as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))
             
     # Loop through reports looking specifically for mod_reports
     if "report" in rules_by_type:
         rules = Rule.sort_rules(rules_by_type['report'])
-    try:
-        for item in subreddit.mod.reports():
-            if item.mod_reports and not item.approved and not item.removed: 
-                print("Processing Report on %s %s" % (type(item).__name__, item))
-                mod = ReportModerator(item)
-                for rule in rules:
-                    ran = mod.moderate(rule)
-                    if ran:
-                        # If the rule passes, don't apply any additional rules for this item
-                        break
-    except prawcore.exceptions.BadJSON as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))
-    except prawcore.exceptions.ServerError as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))
-    except prawcore.exceptions.RequestException as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))
-    except praw.exceptions.PRAWException as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))	
-    except praw.exceptions.APIException as e:
-        print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+        try:
+            for item in subreddit.mod.reports():
+                if item.mod_reports and not item.approved and not item.removed: 
+                    print("Processing Report on %s %s" % (type(item).__name__, item))
+                    mod = ReportModerator(item)
+                    for rule in rules:
+                        ran = mod.moderate(rule)
+                        if ran:
+                            # If the rule passes, don't apply any additional rules for this item
+                            break
+        except prawcore.exceptions.BadJSON as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+        except prawcore.exceptions.ServerError as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+        except prawcore.exceptions.RequestException as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+        except praw.exceptions.PRAWException as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))	
+        except praw.exceptions.APIException as e:
+            print("PRAW Exception \"{error}\" occurred: ".format(error=e))
 
     n = (n + 1) % 5
     sleep(0.5) # Sleep just a bit each time, to avoid hitting our rate limit
