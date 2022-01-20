@@ -100,8 +100,16 @@ while True:
                     if ran:
                         # If the rule passes, don't apply any additional rules for this item
                         break
-        except prawcore.exceptions.BadJSON:
-            print("Error: ", prawcore.exceptions.BadJSON)
+		except prawcore.exceptions.BadJSON as e:
+			print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+		except prawcore.exceptions.ServerError as e:
+			print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+		except prawcore.exceptions.RequestException as e:
+			print("PRAW Exception \"{error}\" occurred: ".format(error=e))
+		except praw.exceptions.PRAWException as e:
+			print("PRAW Exception \"{error}\" occurred: ".format(error=e))	
+		except praw.exceptions.APIException as e:
+			print("PRAW Exception \"{error}\" occurred: ".format(error=e))
             
     # Loop through reports looking specifically for mod_reports
     if "report" in rules_by_type:
